@@ -11,6 +11,28 @@ currentDate=${CURRENT_DATE:-$(date +%Y-%m-%d)}
 export INSTALL_ROOT origInstallDir LAB_ID LAB_TITLE SYSTEM_PASSWORD LEVEL_PASSWORD_ROOT currentDate
 . "$INSTALL_ROOT/resources.sh"
 . "$INSTALL_ROOT/polylinux-common.sh"
+# Values from the PolyLab server, which the lab page appends to the image: the
+# participant's email, the exercise date and one seed per level. The server
+# computes the seeds with the seed-v1 formula and a SYSTEM_PASSWORD that never
+# reaches the VM, so seeds (and answers) cannot be worked out from this code.
+# Without the file, the lab behaves as before (asks for the email and uses the
+# passwords above), which is only meant for local development.
+POLYLAB_SCENARIO=/etc/polylab/scenario.env
+POLYLAB_SERVER=0
+if [ -f "$POLYLAB_SCENARIO" ]; then
+    . "$POLYLAB_SCENARIO"
+    [ "${POLYLAB_LAB:-}" = "$LAB_ID" ] || die "$POLYLAB_SCENARIO is for ${POLYLAB_LAB:-another lab}, not $LAB_ID"
+    POLYLAB_SERVER=1
+    SYSTEM_PASSWORD='(held by the PolyLab server)'
+    export SYSTEM_PASSWORD currentDate
+    level_seed_v1() {
+        eval "seed=\${LEVEL_HASH_$levelnumber:-}"
+        case "$seed" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) printf '%s\n' "$seed" ;;
+            *) poly_die "$POLYLAB_SCENARIO has no seed for level $levelnumber" ;;
+        esac
+    }
+fi
 NON_INTERACTIVE=0
 NO_LOGIN=0
 for arg in "$@"; do
@@ -20,7 +42,9 @@ for arg in "$@"; do
         *) die "unknown option: $arg" ;;
     esac
 done
-if [ "$NON_INTERACTIVE" -eq 1 ]; then
+if [ "$POLYLAB_SERVER" -eq 1 ]; then
+    raw_user=$USER_ID
+elif [ "$NON_INTERACTIVE" -eq 1 ]; then
     raw_user=${USER_ID:-student@example.edu}
 else
     confirmation=n
