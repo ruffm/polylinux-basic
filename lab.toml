@@ -1,0 +1,22 @@
+# What the PolyLab pipeline needs to know to build and test this lab.
+# The format: https://github.com/Giacobelab/poly-pipeline/blob/main/docs/lab-toml.md
+schema = 1
+id = "polylinux-basic"
+title = "PolyLinux Basic"
+
+# The PolyLab baseline image the lab is built on (a Buildroot config set in
+# poly-platform). The level count and user names come from lab.json.
+baseline = "basic"
+
+[overlay]
+# This repo's root becomes /root in the image.
+folder = "."
+dest = "/root"
+
+[test]
+# Boot in QEMU, let install.sh log in as level1, then reach every level with nextlevel.
+boot = "generic"
+
+[server]
+# install.sh reads its seeds from /etc/polylab/scenario.env (from the PolyLab server).
+values = true
